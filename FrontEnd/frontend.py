@@ -1,8 +1,11 @@
 import streamlit as st
 import requests
 import pandas as pd
+import os
 
-api_url = "http://127.0.0.1:8000/tasks"
+BACKEND_URL = os.getenv("BACKEND_URL","http://backend:8000")
+api_url = f"{BACKEND_URL}/tasks"
+task_post_url = f"{BACKEND_URL}/task"
 
 # Set page config for wide layout
 st.set_page_config(layout="wide", page_title="TaskMind - ToDo App")
@@ -15,7 +18,6 @@ with st.form(key="task_form"):
 
 if submit_button and raw_task:
     payload = {"original_text": raw_task}
-    task_post_url = "http://127.0.0.1:8000/task"
     response = requests.post(url=task_post_url, json=payload)
     if response.status_code == 200:
         st.success(f"Task added : {response.json()['title']}")

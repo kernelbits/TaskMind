@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: BackEnd/Dockerfile
+    container_name: taskmind-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///data/taskmind.db
+    networks:
+      - taskmind-network
+    depends_on:
+      - ollama
+
+  # Frontend service
+  frontend:
+    build:
+      context: .
+      dockerfile: FrontEnd/Dockerfile
+    container_name: taskmind-frontend
+    ports:
+      - "8501:8501"
+    networks:
+      - taskmind-network
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8000
+
+  # Ollama LLM service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: taskmind-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - taskmind-network
+
+networks:
+  taskmind-network:
+    driver: bridge
+
+volumes:
+  ollama-data:

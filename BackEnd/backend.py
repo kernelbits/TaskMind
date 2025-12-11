@@ -1,6 +1,7 @@
 import datetime
 import enum
 import json
+import os
 from typing import List, Optional
 import requests
 from pydantic import BaseModel,Field
@@ -70,7 +71,7 @@ def get_db():
 
 
 def reform_with_llm(task_text: str) -> dict:
-    url = "http://localhost:11434/api/chat"
+    url = os.getenv("OLLAMA_URL","http://ollama:11434/api/chat")
     prompt = f"""
     You are an AI task organizer.  Take this task description and return a JSON with:
     title, priority (High, Medium, Low), category, deadline, notes.
