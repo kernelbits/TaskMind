@@ -1,5 +1,6 @@
 import datetime
 import enum
+import json
 import os
 from typing import List, Optional
 
@@ -30,11 +31,11 @@ class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True,autoincrement=True)
     original_text = Column(String,nullable=False)
-    title = Column(String,nullable=False)
+    title = Column(String,nullable=True,default="Untitled Task")
     priority = Column(Enum(PriorityEnum),default=PriorityEnum.Medium)
-    deadline = Column(String,nullable=False)
-    category = Column(String,nullable=False)
-    notes = Column(String,nullable=False)
+    deadline = Column(String,nullable=True,default="No deadline")
+    category = Column(String,nullable=True,default="General")
+    notes = Column(String,nullable=True,default="")
     created_at = Column(DateTime(timezone=True),server_default=func.now())
     updated_at = Column(DateTime(timezone=True),server_default=func.now(),onupdate=func.now())
 
@@ -65,39 +66,78 @@ def get_db():
 
 def reform_with_llm(task_text: str) -> dict:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-    GROQ_API_URL = "https://api.groq.ai/v1/llm"
+    GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
     prompt = f"""
-        Your are an AI task organizer, Take this task description and return a JSON with:
+        You are an AI task organizer, Take this task description and return a JSON with:
         title,priority(High,Medium,Low),category,deadline,notes.
         Task: {task_text}
+        Return ONLY valid JSON, no additional text.
         """
     payload = {
-        "prompt": prompt,
-        "max_tokens":100
+        "model": "mixtral-8x7b-32768",
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "max_tokens": 100
     }
 
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    response = requests.post(GROQ_API_URL, json=payload, headers=headers)
-    if response.status_code == 200:
-        try:
-            results = response.json()
-            return results.get("text")
-        except:
-            return {}
-    return {}
+    try:
+        response = requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        results = response.json()
+        
+        # Extract the content from the OpenAI-compatible response
+        content = results.get("choices", [{}])[0].get("message", {}).get("content", "")
+        
+        # Parse the JSON content
+        if content:
+            # Try to extract JSON from the content (in case there's extra text)
+            content = content.strip()
+            # Find JSON object in the response
+            start_idx = content.find('{')
+            end_idx = content.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_str = content[start_idx:end_idx+1]
+                parsed_data = json.loads(json_str)
+                return parsed_data
+        return {}
+    except requests.exceptions.RequestException as e:
+        print(f"API request error: {e}")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
+        return {}
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return {}
 
 
 @app.post("/task",response_model=ReadTask)
 def create_task(task: CreateTask,db: Session = Depends(get_db)):
     refined_task = reform_with_llm(task.original_text)
+    
+    # Map priority string to PriorityEnum
+    priority_str = refined_task.get("priority", "Medium")
+    try:
+        priority_enum = PriorityEnum[priority_str]
+    except (KeyError, TypeError):
+        priority_enum = PriorityEnum.Medium
+    
     db_task = Task(
         original_text = task.original_text,
-        title = refined_task.get("title"),
-        priority = refined_task.get("priority"),
-        deadline = refined_task.get("deadline"),
-        category = refined_task.get("category"),
-        notes = refined_task.get("notes"),
+        title = refined_task.get("title", "Untitled Task"),
+        priority = priority_enum,
+        deadline = refined_task.get("deadline", "No deadline"),
+        category = refined_task.get("category", "General"),
+        notes = refined_task.get("notes", ""),
     )
     db.add(db_task)
     db.commit()
