@@ -39,7 +39,7 @@ if tasks_response.status_code == 200:
                 return 'background-color: #ccffcc; color: #009900;'  # Green background
             return ''
         
-        styled_df = df.style.applymap(color_priority, subset=['priority'])
+        styled_df = df.style.map(color_priority, subset=['priority'])
         st.dataframe(styled_df)
     else:
         st.info("No tasks added")

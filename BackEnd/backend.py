@@ -68,7 +68,7 @@ def reform_with_llm(task_text: str) -> dict:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
     prompt = f"""
-        Your are an AI task organizer, Take this task description and return a JSON with:
+        You are an AI task organizer, Take this task description and return a JSON with:
         title,priority(High,Medium,Low),category,deadline,notes.
         Task: {task_text}
         Return ONLY valid JSON, no additional text.
