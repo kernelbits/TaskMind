@@ -1,16 +1,15 @@
 import datetime
 import enum
 import json
-import os
 from typing import List, Optional
-
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from sqlalchemy.orm import Session,sessionmaker
 from sqlalchemy import create_engine,Column,Integer,String,Index,func,Enum,DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from fastapi import FastAPI, Depends
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -41,6 +40,12 @@ class Task(Base):
 
 
 Base.metadata.create_all(engine)
+class TaskDetails(BaseModel):
+    title: str = Field(description="The title of the task.")
+    priority: str = Field(description="Priority level: High, Medium, or Low.")
+    category: str = Field(description="Category of the task.")
+    deadline: str = Field(description="Deadline for the task.")
+    notes: str = Field(description="Additional notes for the task.")
 
 class CreateTask(BaseModel):
     original_text: str
@@ -65,59 +70,42 @@ def get_db():
 
 
 def reform_with_llm(task_text: str) -> dict:
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-    GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    url = "http://localhost:11434/api/chat"
     prompt = f"""
-        You are an AI task organizer, Take this task description and return a JSON with:
-        title,priority(High,Medium,Low),category,deadline,notes.
-        Task: {task_text}
-        Return ONLY valid JSON, no additional text.
-        """
-    payload = {
-        "model": "mixtral-8x7b-32768",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "max_tokens": 100
-    }
-
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    You are an AI task organizer.  Take this task description and return a JSON with:
+    title, priority (High, Medium, Low), category, deadline, notes.
+    Task: {task_text}
+    Return ONLY valid JSON, no additional text.
+    """
 
     try:
-        response = requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=10)
+        response = requests.post(url, json={
+            "model": "gemma2:2b",
+            "messages": [
+                {'role': 'system', 'content': prompt},
+                {'role': 'user', 'content': task_text}
+            ],
+            "stream": False  # Disable streaming for easier parsing
+        })
+
         response.raise_for_status()
-        results = response.json()
-        
-        # Extract the content from the OpenAI-compatible response
-        content = results.get("choices", [{}])[0].get("message", {}).get("content", "")
-        
-        # Parse the JSON content
-        if content:
-            # Try to extract JSON from the content (in case there's extra text)
-            content = content.strip()
-            # Find JSON object in the response
-            start_idx = content.find('{')
-            end_idx = content.rfind('}')
-            if start_idx != -1 and end_idx != -1:
-                json_str = content[start_idx:end_idx+1]
-                parsed_data = json.loads(json_str)
-                return parsed_data
-        return {}
-    except requests.exceptions.RequestException as e:
-        print(f"API request error: {e}")
-        return {}
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
+        data = response.json()
+
+        # Ollama's response structure:  the content is in message. content
+        content = data.get("message", {}).get("content", "").strip()
+
+        # Extract and parse JSON
+        start_idx = content.find('{')
+        end_idx = content.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            json_str = content[start_idx:end_idx + 1]
+            parsed_data = json.loads(json_str)
+            return parsed_data
         return {}
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"LLM error: {e}")
         return {}
+
 
 
 @app.post("/task",response_model=ReadTask)
