@@ -64,9 +64,31 @@ def get_db():
         db.close()
 
 
+def _get_default_task_data(task_text: str) -> dict:
+    """
+    Fallback function that returns default task data when LLM parsing fails.
+    Uses the original task text as the title.
+    """
+    print(f"[DEBUG] Creating default task data for: {task_text[:50]}...")
+    return {
+        "title": task_text[:100] if len(task_text) <= 100 else task_text[:97] + "...",
+        "priority": "Medium",
+        "category": "General",
+        "deadline": "No deadline",
+        "notes": "Created with fallback values due to LLM parsing failure"
+    }
+
+
 def reform_with_llm(task_text: str) -> dict:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    
+    # Debug: Log API key status (masked for security)
+    if GROQ_API_KEY:
+        print(f"[DEBUG] API key found: {GROQ_API_KEY[:8]}...{GROQ_API_KEY[-4:] if len(GROQ_API_KEY) > 12 else '****'}")
+    else:
+        print("[DEBUG] WARNING: No API key found in environment!")
+    
     prompt = f"""
         You are an AI task organizer, Take this task description and return a JSON with:
         title,priority(High,Medium,Low),category,deadline,notes.
@@ -90,12 +112,24 @@ def reform_with_llm(task_text: str) -> dict:
     }
 
     try:
+        print(f"[DEBUG] Making API request to {GROQ_API_URL}")
         response = requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=10)
+        
+        # Debug: Log response status
+        print(f"[DEBUG] Response status code: {response.status_code}")
+        print(f"[DEBUG] Raw response: {response.text[:500]}...")  # First 500 chars
+        
         response.raise_for_status()
         results = response.json()
         
+        # Debug: Log the full response structure
+        print(f"[DEBUG] Response JSON structure: {json.dumps(results, indent=2)[:500]}...")
+        
         # Extract the content from the OpenAI-compatible response
         content = results.get("choices", [{}])[0].get("message", {}).get("content", "")
+        
+        # Debug: Log extracted content
+        print(f"[DEBUG] Extracted content: {content}")
         
         # Parse the JSON content
         if content:
@@ -106,18 +140,33 @@ def reform_with_llm(task_text: str) -> dict:
             end_idx = content.rfind('}')
             if start_idx != -1 and end_idx != -1:
                 json_str = content[start_idx:end_idx+1]
+                print(f"[DEBUG] Extracted JSON string: {json_str}")
                 parsed_data = json.loads(json_str)
+                print(f"[DEBUG] Successfully parsed data: {parsed_data}")
                 return parsed_data
-        return {}
+            else:
+                print("[DEBUG] ERROR: No JSON object found in content")
+                print("[DEBUG] Falling back to default values")
+                return _get_default_task_data(task_text)
+        else:
+            print("[DEBUG] ERROR: Empty content received from API")
+            print("[DEBUG] Falling back to default values")
+            return _get_default_task_data(task_text)
     except requests.exceptions.RequestException as e:
-        print(f"API request error: {e}")
-        return {}
+        print(f"[DEBUG] API request error: {e}")
+        print(f"[DEBUG] Error type: {type(e).__name__}")
+        print("[DEBUG] Falling back to default values")
+        return _get_default_task_data(task_text)
     except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        return {}
+        print(f"[DEBUG] JSON parsing error: {e}")
+        print(f"[DEBUG] Failed to parse: {content if 'content' in locals() else 'N/A'}")
+        print("[DEBUG] Falling back to default values")
+        return _get_default_task_data(task_text)
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {}
+        print(f"[DEBUG] Unexpected error: {e}")
+        print(f"[DEBUG] Error type: {type(e).__name__}")
+        print("[DEBUG] Falling back to default values")
+        return _get_default_task_data(task_text)
 
 
 @app.post("/task",response_model=ReadTask)
