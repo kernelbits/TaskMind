@@ -5,9 +5,8 @@ import os
 from typing import List, Optional
 import requests
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker, declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, Index, func, Enum, DateTime
-from sqlalchemy.ext.declarative import declarative_base
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
