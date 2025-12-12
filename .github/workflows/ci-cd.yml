@@ -1,0 +1,136 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_USERNAME: ${{ secrets. DOCKERHUB_USERNAME }}
+  BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/taskmind-backend
+  FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/taskmind-frontend
+
+jobs:
+  # Job 1: Run tests
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run linting
+        run: |
+          pip install flake8
+          # Stop build if there are Python syntax errors
+          flake8 BackEnd/backend.py FrontEnd/frontend.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 BackEnd/backend.py FrontEnd/frontend.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test Backend imports
+        run: |
+          python -c "from BackEnd.backend import app; print('Backend imports OK')"
+
+      - name: Test Frontend imports
+        run: |
+          python -c "import sys; sys.path.insert(0, 'FrontEnd'); exec(open('FrontEnd/frontend.py').read().split('st.')[0]); print('Frontend imports OK')"
+
+  # Job 2: Build and push Docker images
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Backend image
+        uses:  docker/build-push-action@v5
+        with:
+          context: .
+          file: ./BackEnd/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs. tags }}
+          labels: ${{ steps.meta-backend.outputs. labels }}
+          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
+
+      - name:  Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env. FRONTEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context:  .
+          file: ./FrontEnd/Dockerfile
+          push:  true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=registry,ref=${{ env. FRONTEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env. FRONTEND_IMAGE }}:buildcache,mode=max
+
+      - name: Image digest
+        run: |
+          echo "Backend:  ${{ steps.meta-backend. outputs.tags }}"
+          echo "Frontend:  ${{ steps.meta-frontend. outputs.tags }}"
+
+  # Job 3: Deploy (optional - we'll add deployment target later)
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name:  Checkout code
+        uses: actions/checkout@v4
+
+      - name:  Deployment notification
+        run: |
+          echo "🚀 Ready to deploy!"
+          echo "Backend Image: ${{ env.BACKEND_IMAGE }}:latest"
+          echo "Frontend Image: ${{ env.FRONTEND_IMAGE }}:latest"
+          echo "Add deployment steps here (SSH, Docker Compose, etc. )"
+
+      # We'll add actual deployment steps later

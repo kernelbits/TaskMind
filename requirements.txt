@@ -7,3 +7,6 @@ python-dotenv
 streamlit
 pandas
 groq
+pytest
+flake8
+pytest-cov
