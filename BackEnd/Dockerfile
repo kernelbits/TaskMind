@@ -9,10 +9,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY BackEnd/backend.py .
+COPY BackEnd/backend. py .
 
-# Don't copy .env - we'll pass it via docker-compose
+# Create data directory
+RUN mkdir -p /app/data
 
+# Expose port (Render uses PORT env var)
 EXPOSE 8000
 
-CMD ["uvicorn", "backend:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use PORT from environment (Render requirement)
+CMD uvicorn backend:app --host 0.0.0.0 --port ${PORT:-8000}

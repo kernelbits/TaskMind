@@ -1,20 +1,18 @@
-# Use Python 3.11 slim image as base
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements file
-COPY requirements.txt .
+# Copy requirements
+COPY requirements.txt . 
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy frontend code
 COPY FrontEnd/frontend.py .
 
-# Expose the port Streamlit runs on
+# Expose port
 EXPOSE 8501
 
-# Command to run the frontend
-CMD ["streamlit", "run", "frontend.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+# Run Streamlit (Render uses PORT env var)
+CMD streamlit run frontend.py --server.port=${PORT:-8501} --server. address=0.0.0.0
