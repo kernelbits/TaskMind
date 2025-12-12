@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Backend service
   backend:
     build:
       context: .
@@ -10,16 +9,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Persist SQLite database
       - ./data:/app/data
     environment:
       - DATABASE_URL=sqlite:///data/taskmind.db
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    env_file:
+      - .env
     networks:
       - taskmind-network
-    depends_on:
-      - ollama
+    restart: unless-stopped
 
-  # Frontend service
   frontend:
     build:
       context: .
@@ -33,21 +32,10 @@ services:
       - backend
     environment:
       - BACKEND_URL=http://backend:8000
+    restart: unless-stopped
 
-  # Ollama LLM service
-  ollama:
-    image: ollama/ollama:latest
-    container_name: taskmind-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - taskmind-network
+  # Ollama removed - using Groq API instead
 
 networks:
   taskmind-network:
     driver: bridge
-
-volumes:
-  ollama-data:
