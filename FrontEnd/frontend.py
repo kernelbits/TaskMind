@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import os
 
-BACKEND_URL = os.getenv("BACKEND_URL","http://backend:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 api_url = f"{BACKEND_URL}/tasks"
 task_post_url = f"{BACKEND_URL}/task"
 
@@ -36,7 +36,6 @@ if tasks_response.status_code == 200:
 
         st.subheader("Tasks List")
 
-
         # Apply color styling to priority column
         def color_priority(val):
             val_str = str(val)
@@ -47,7 +46,6 @@ if tasks_response.status_code == 200:
             elif "Low" in val_str:
                 return 'background-color:  #ccffcc; color: #009900;'
             return ''
-
 
         styled_df = df.style.applymap(color_priority, subset=['priority'])
 

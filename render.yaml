@@ -2,14 +2,14 @@ services:
   # Backend service
   - type: web
     name: taskmind-backend
-    env:  docker
+    env: docker
     dockerfilePath: ./BackEnd/Dockerfile
     dockerContext: .
     region: oregon  # or singapore, frankfurt, ohio
     plan: free
     healthCheckPath: /tasks
     envVars:
-      - key:  DATABASE_URL
+      - key: DATABASE_URL
         value: sqlite:///data/taskmind.db
       - key: GROQ_API_KEY
         sync: false  # Will add manually in dashboard
@@ -27,5 +27,5 @@ services:
     region: oregon
     plan: free
     envVars:
-      - key:  BACKEND_URL
-        value:  https://taskmind-backend.onrender.com  # Will update after backend deploys
+      - key: BACKEND_URL
+        value: https://taskmind-backend.onrender.com  # Will update after backend deploys

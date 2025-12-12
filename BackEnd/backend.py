@@ -3,21 +3,28 @@ import enum
 import json
 import os
 from typing import List, Optional
-import requests
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine, Column, Integer, String, Index, func, Enum, DateTime
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker, declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, func, Enum, DateTime
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from groq import Groq
-import os
+
 load_dotenv()
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-os.makedirs("data",exist_ok=True)
+
+os.makedirs("data", exist_ok=True)
 database_url = "sqlite:///data/taskmind.db"
 engine = create_engine(database_url, connect_args={"check_same_thread": False})
 Base = declarative_base()
@@ -97,7 +104,8 @@ def reform_with_llm(task_text: str) -> dict:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a task organizer.  Analyze tasks and return JSON with keys: title, priority (High/Medium/Low), category, deadline, notes."
+                    "content": "You are a task organizer. Analyze tasks and return JSON with keys: "
+                               "title, priority (High/Medium/Low), category, deadline, notes."
                 },
                 {
                     "role": "user",
