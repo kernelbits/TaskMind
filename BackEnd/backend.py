@@ -11,11 +11,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from fastapi import FastAPI, Depends
 from dotenv import load_dotenv
 from groq import Groq
-
+import os
 load_dotenv()
 
 app = FastAPI()
 
+
+os.makedirs("data",exist_ok=True)
 database_url = "sqlite:///data/taskmind.db"
 engine = create_engine(database_url, connect_args={"check_same_thread": False})
 Base = declarative_base()
