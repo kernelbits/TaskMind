@@ -9,12 +9,21 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine, Column, Integer, String, Index, func, Enum, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from groq import Groq
 import os
 load_dotenv()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 os.makedirs("data",exist_ok=True)
