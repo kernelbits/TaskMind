@@ -1,6 +1,6 @@
 # TaskMind
 
-A full-stack task management application built with Python, featuring a Streamlit frontend and Flask backend, containerized with Docker and deployed with CI/CD automation.
+A full-stack task management application built with Python, featuring a Streamlit frontend and FastAPI backend, containerized with Docker and deployed with CI/CD automation.
 
 ## 📋 Table of Contents
 - [Overview](#overview)
@@ -23,8 +23,8 @@ TaskMind is a modern task management application that allows users to create, ma
 ## 🛠️ Tech Stack
 
 - **Frontend**: Streamlit (Python)
-- **Backend**: Flask (Python)
-- **Database**: PostgreSQL
+- **Backend**: FastAPI (Python)
+- **Database**: SQLite
 - **Containerization**: Docker & Docker Compose
 - **CI/CD**: GitHub Actions
 - **Container Registry**: Docker Hub
@@ -51,7 +51,7 @@ git branch -M master
 **1.3 Create initial project structure**
 ```bash
 mkdir FrontEnd BackEnd tests
-touch README.md . gitignore requirements.txt
+touch README.md .gitignore requirements.txt
 ```
 
 **1.4 Create .gitignore**
@@ -60,9 +60,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.db
-. env
+.env
 venv/
-. DS_Store
+.DS_Store
 ```
 
 **1.5 First commit**
@@ -85,7 +85,7 @@ git push -u origin master
 **2.1 Create Frontend structure**
 ```bash
 cd FrontEnd
-touch frontend. py Dockerfile requirements.txt
+touch frontend.py Dockerfile requirements.txt
 ```
 
 **2.2 Install Streamlit**
@@ -113,9 +113,6 @@ streamlit run frontend.py
 
 **2.6 Commit frontend**
 ```bash
-git add FrontEnd/
-git commit -m "feat: Add Streamlit frontend"
-git push origin master
 ```
 
 ---
@@ -132,9 +129,8 @@ git push origin master
   - `created_at` (TIMESTAMP)
   - `updated_at` (TIMESTAMP)
 
-**3.2 Choose PostgreSQL**
-- Selected PostgreSQL for reliability and scalability
-- Decided to use managed database service for production
+**3.2 Choose database**
+- Selected SQLite for simplicity and local development
 
 **3.3 Create database configuration**
 - Set up environment variables for database connection
@@ -163,13 +159,13 @@ cd BackEnd
 touch backend.py Dockerfile requirements.txt
 ```
 
-**4.2 Install Flask and dependencies**
+**4.2 Install dependencies**
 ```bash
-pip install flask flask-cors psycopg2-binary python-dotenv
+pip install fastapi fastapi-cors psycopg2-binary python-dotenv
 ```
 
-**4.3 Build Flask API** (`BackEnd/backend.py`)
-- Set up Flask application
+**4.3 Build API** (`BackEnd/backend.py`)
+- Set up FastAPI application
 - Configured CORS for frontend communication
 - Implemented REST API endpoints: 
   - `GET /tasks` - List all tasks
@@ -182,8 +178,8 @@ pip install flask flask-cors psycopg2-binary python-dotenv
 
 **4.4 Create Backend requirements** (`BackEnd/requirements.txt`)
 ```txt
-flask
-flask-cors
+fastapi
+fastapi-cors
 psycopg2-binary
 python-dotenv
 ```
@@ -194,10 +190,10 @@ python backend.py
 # Test endpoints with curl or Postman
 ```
 
-**4.6 Create root requirements. txt**
+**4.6 Create root requirements.txt**
 ```txt
-flask
-flask-cors
+fastapi
+fastapi-cors
 streamlit
 requests
 psycopg2-binary
@@ -207,7 +203,7 @@ python-dotenv
 **4.7 Commit backend**
 ```bash
 git add BackEnd/ requirements.txt
-git commit -m "feat: Add Flask backend API"
+git commit -m "feat: Add FastAPI backend"
 git push origin master
 ```
 
@@ -240,7 +236,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY frontend. py .
+COPY frontend.py .
 
 EXPOSE 8501
 
@@ -275,13 +271,13 @@ services:
     restart: unless-stopped
 ```
 
-**5.4 Create . dockerignore**
-```
+**5.4 Create .dockerignore**
+```bash
 __pycache__/
-*. pyc
+*.pyc
 *.pyo
 . git/
-.gitignore
+. gitignore
 .env
 venv/
 tests/
@@ -296,7 +292,7 @@ docker-compose up
 
 **5.6 Commit Docker configuration**
 ```bash
-git add Dockerfile docker-compose.yml . dockerignore
+git add Dockerfile docker-compose.yml .dockerignore
 git commit -m "feat: Add Docker containerization"
 git push origin master
 ```
@@ -319,8 +315,7 @@ on:
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/taskmind-backend
-  FRONTEND_IMAGE: ${{ secrets. DOCKERHUB_USERNAME }}/taskmind-frontend
-
+  FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/taskmind-frontend
 jobs: 
   test:
     name: Run Tests
@@ -348,7 +343,7 @@ jobs:
       
       - name: Test Backend imports
         run: |
-          python -c "import sys; sys.path.insert(0, '. '); from BackEnd.backend import app; print('✅ Backend imports OK')"
+          python -c "import sys; sys.path.insert(0, '.'); from BackEnd.backend import app; print('✅ Backend imports OK')"
       
       - name: Run tests
         run: |
@@ -381,7 +376,7 @@ jobs:
           push: true
           tags: |
             ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:${{ github. sha }}
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
       
       - name: Build and push Frontend image
         uses: docker/build-push-action@v5
@@ -390,7 +385,7 @@ jobs:
           file: ./FrontEnd/Dockerfile
           push: true
           tags: |
-            ${{ env. FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
 
   deploy:
@@ -460,7 +455,6 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-
   - type: web
     name: taskmind-frontend
     env: docker
@@ -497,14 +491,14 @@ git push origin master
 
 ---
 
-## 🏃 Running Locally
+## 🔧 Running Locally
 
-### Prerequisites
+## Prerequisites
 - Python 3.11+
 - Docker & Docker Compose
 - PostgreSQL (or use Docker)
 
-### With Docker (Recommended)
+## With Docker (Recommended)
 ```bash
 # Clone the repository
 git clone https://github.com/kernelbits/TaskMind.git
@@ -522,14 +516,14 @@ Access:
 - Frontend: http://localhost:8501
 - Backend API: http://localhost:5000
 
-### Without Docker
+## Without Docker
 ```bash
 # Clone the repository
 git clone https://github.com/kernelbits/TaskMind.git
 cd TaskMind
 
 # Install dependencies
-pip install -r requirements. txt
+pip install -r requirements.txt
 
 # Run backend
 cd BackEnd
@@ -542,7 +536,7 @@ streamlit run frontend.py
 
 ---
 
-## 📝 Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
@@ -552,7 +546,7 @@ streamlit run frontend.py
 
 ---
 
-## 📦 Docker Images
+## 🐳 Docker Images
 
 Pull pre-built images from Docker Hub:
 ```bash
