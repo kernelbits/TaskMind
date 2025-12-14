@@ -122,11 +122,9 @@ def reform_with_llm(task_text: str) -> dict:
 
         parsed_data = json.loads(content)
 
-        # Validate priority
         if parsed_data.get("priority") not in ["High", "Medium", "Low"]:
             parsed_data["priority"] = "Medium"
 
-        # Ensure all fields exist
         parsed_data.setdefault("title", task_text[: 50])
         parsed_data.setdefault("category", "General")
         parsed_data.setdefault("deadline", "No deadline")
@@ -144,7 +142,6 @@ def fallback_parsing(task_text: str) -> dict:
 
     text_lower = task_text.lower()
 
-    # Detect priority
     high_keywords = ['urgent', 'important', 'critical', 'asap', 'emergency', 'crucial']
     low_keywords = ['later', 'someday', 'maybe', 'eventually']
 
@@ -155,7 +152,6 @@ def fallback_parsing(task_text: str) -> dict:
     else:
         priority = 'Medium'
 
-    # Detect category
     if any(word in text_lower for word in ['buy', 'shop', 'groceries', 'store']):
         category = 'Shopping'
     elif any(word in text_lower for word in ['meeting', 'work', 'project', 'deadline', 'report']):
@@ -165,7 +161,6 @@ def fallback_parsing(task_text: str) -> dict:
     else:
         category = 'General'
 
-    # Detect deadline
     deadline = "No deadline"
     if 'today' in text_lower:
         deadline = 'Today'
@@ -187,7 +182,6 @@ def fallback_parsing(task_text: str) -> dict:
 def create_task(task: CreateTask, db: Session = Depends(get_db)):
     refined_task = reform_with_llm(task.original_text)
 
-    # Map priority string to PriorityEnum
     priority_str = refined_task.get("priority", "Medium")
     try:
         priority_enum = PriorityEnum[priority_str]

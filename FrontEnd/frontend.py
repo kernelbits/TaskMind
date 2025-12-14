@@ -7,7 +7,6 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 api_url = f"{BACKEND_URL}/tasks"
 task_post_url = f"{BACKEND_URL}/task"
 
-# Set page config for wide layout
 st.set_page_config(layout="wide", page_title="TaskMind - ToDo App")
 
 st.title("TaskMind - ToDo App")
@@ -30,13 +29,11 @@ if tasks_response.status_code == 200:
     if tasks:
         df = pd.DataFrame(tasks)
 
-        # Convert priority to string if needed
         if 'priority' in df.columns:
             df['priority'] = df['priority'].astype(str)
 
         st.subheader("Tasks List")
 
-        # Apply color styling to priority column
         def color_priority(val):
             val_str = str(val)
             if "High" in val_str:
@@ -49,7 +46,6 @@ if tasks_response.status_code == 200:
 
         styled_df = df.style.applymap(color_priority, subset=['priority'])
 
-        # Make table use full container width and add height
         st.dataframe(styled_df, use_container_width=True, height=600)
     else:
         st.info("No tasks added")
